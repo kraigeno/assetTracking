@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>Asset Tracking Console</title>
+  <!-- Original globe display code from https://www.d3indepth.com/geographic/  -->
+
+  <!--
+# Asset objects have an ID, name, agency, facility, current project
+assets["WHOI"]["DSV-2"] = Assets.Asset("DSV-2", "Alvin", "WHOI", "Benthic Explorer", "unknown")
+
+# AssetEvent objects have an assetId, event timestamp, latitude, longitude, depth, status
+
+  -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
+  <script src="/console/console.js" ></script>
+</head>
+
+<style>
+body {
+  font-family: "Helvetica neue", Helvetica, sans-serif;
+  font-size: 14px;
+  color: #444444;
+  background-color: #e0e5e0;
+}
+
+td.divider-column {
+  background-color: #ffcc99;
+}
+td.metadata-column {
+  color: #888888;
+  background-color: #333333;
+  vertical-align: top;
+}
+span.metadata-label {
+  margin-left: 5px;
+}
+
+span.metadata {
+  font-size:18px;
+  font-weight: bold;
+  color: #eeeeff;
+  margin-left: 5px;
+}
+</style>
+
+<body onLoad="start(document.getElementById('mapCanvas'), 800, 600);">
+  <b>Asset Tracking Console demo</b>
+  <table>
+  <tr>
+  <td>    <div id="content"> <canvas id=mapCanvas width="800" height="600"></canvas> </div> </td>
+  <td class="divider-column" width="1px"/>
+  <td class="metadata-column" valign=top">
+    <span class="metadata-label">Asset:</span>     <span class="metadata" id="assetDescription"></span> <br/>
+    <span class="metadata-label">Agency:</span>    <span class="metadata" id="assetAgency"></span> <br/>
+    <span class="metadata-label">Facility:</span>  <span class="metadata" id="assetFacility"></span> <br/>
+    <span class="metadata-label">Project:</span>   <span class="metadata" id="assetProject"></span> <br/>
+    <span class="metadata-label">Status:</span>    <span class="metadata" id="assetStatus"></span> <br/>
+    <span class="metadata-label">Latitude:</span>  <span class="metadata" id="assetLatitude"></span> <br/>
+    <span class="metadata-label">Longitude:</span> <span class="metadata" id="assetLongitude"></span> <br/>
+    <span class="metadata-label">Depth:</span>     <span class="metadata" id="assetDepth"></span> <br/>
+
+<hr>
+
+<span class="metadata-label">Asset ID:</span> <input id="assetId" type="text" value="DSV-2"> <br/>
+
+<button id="trackButton" onClick="toggleTracking();">&#x25B6; Start Tracking</button> <br/>
+
+<span class="metadata-label">Asset Server URL:</span> <input id="serverUrl" type="text" value="http://localhost:8001"> <br/>
+<!-- <button onClick="getTrackingData();">GET test</button> -->
+
+<hr>
+<!-- the following were for initial testing with direct manual entry of position data
+    Latitude: <input id="latitude_entry" type=text value="no data"> <br/>
+    Longitude: <input id="longitude_entry" type=text value="no data"> <br/>
+    <button onClick="manualPositionUpdate();">Update</button>
+-->
+ </td>
+
+</body>
+</html>
