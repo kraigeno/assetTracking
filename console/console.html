@@ -2,15 +2,7 @@
 <meta charset="utf-8">
 <head>
   <title>Asset Tracking Console</title>
-  <!-- Original globe display code from https://www.d3indepth.com/geographic/  -->
-
-  <!--
-# Asset objects have an ID, name, agency, facility, current project
-assets["WHOI"]["DSV-2"] = Assets.Asset("DSV-2", "Alvin", "WHOI", "Benthic Explorer", "unknown")
-
-# AssetEvent objects have an assetId, event timestamp, latitude, longitude, depth, status
-
-  -->
+  <!-- Demonstration web app client by Kraig Eno, December 2020 -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
   <script src="/console/console.js" ></script>
@@ -64,7 +56,7 @@ span.metadata {
 
 <span class="metadata-label">Asset ID:</span> <input id="assetId" type="text" value="DSV-2"> <br/>
 
-<button id="trackButton" onClick="toggleTracking();">&#x25B6; Start Tracking</button> <br/>
+<button id="trackButton" onClick="toggleTracking();">&#x25B6; Start Live Tracking</button> <br/>
 
 <span class="metadata-label">Asset Server URL:</span> <input id="serverUrl" type="text" value="http://localhost:8001"> <br/>
 <!-- <button onClick="getTrackingData();">GET test</button> -->

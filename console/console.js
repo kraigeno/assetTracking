@@ -1,3 +1,15 @@
+/*
+  Web app client script by Kraig Eno, December 2020
+
+  The page continuously updates the Canvas-based globe and other parts of the UI,
+  using data that is updated periodically by polling a server using XMLHttpRequest.
+
+  Original globe display code skeleton is from https://www.d3indepth.com/geographic/
+*/
+
+// -----------------------------------------------------------------
+// global variables initialized to static values at page startup
+
 var geojson = {}
 
 var context;
@@ -7,14 +19,30 @@ var geoGenerator;
 var CANVAS_WIDTH;
 var CANVAS_HEIGHT;
 
+// -----------------------------------------------------------------
+// global variables used for page operation
+
 var doUpdateTrackingData = false; // if true, then trigger a periodic update from the server
 var TRACKING_UPDATE_INTERVAL = 500; // milliseconds
-
 
 var DISPLAY_INTERVAL = 50; // in milliseconds
 var SLEW_INCREMENT = 6;
 var latSlewAmount  = 0;
 var longSlewAmount = 0;
+
+var assetLatitude = NaN; // current location of the asset being tracked
+var assetLongitude = NaN; // (NaN indicates no asset or the location is unknown)
+
+var currentRotation = [0.0, 0.0, 0.0]; // yaw, pitch, roll
+  // view rotation values used to bring the asset location into view in the display
+  // yaw = 0.0 centers Greenwich, England laterally in the display
+  //    (yaw -30 centers the Black Sea in the display; yaw +122 centers Seattle)
+  // pitch = 0.0 centers the equator vertically in the display
+  //    (pitch -45 centers the northern hemisphere, i.e. England, in the display)
+  //    (pitch +45 centers the southern hemisphere in the display)
+
+// -----------------------------------------------------------------
+// global constants for UI configuration
 
 var BACKGROUND_COLOR = "#ddddcc";
 
@@ -28,17 +56,10 @@ var WATER_COLOR = "#cde";
 var MARKER_COLOR = "#ff3020";
 var MARKER_TEXT_COLOR = "#ff3322";
 
-var assetLatitude = NaN;
-var assetLongitude = NaN;
 
+// -----------------------------------------------------------------
 
-var currentRotation = [0.0, 0.0, 0.0]; // yaw, pitch, roll
-  // these are the view rotation values used to bring the asset location into view in the display
-  // yaw = 0.0 centers Greenwich, England laterally in the display
-  //    (yaw -30 centers the Black Sea in the display; yaw +122 centers Seattle)
-  // pitch = 0.0 centers the equator vertically in the display
-  //    (pitch -45 centers the northern hemisphere, i.e. England, in the display)
-  //    (pitch +45 centers the southern hemisphere in the display)
+   // startup initialization: web page calls this once when the page has loaded
 
    function start(canvas, width, height) {
       context = canvas.getContext('2d');
@@ -69,6 +90,7 @@ var currentRotation = [0.0, 0.0, 0.0]; // yaw, pitch, roll
 
    // this function converts a coordinate in the range -N ... +N to
    // one in the range 0..2N, to simplify logic around coordinate differences
+
    function normalize( x, size) {
       if (x >= 0) return x;
       else return x + size;
@@ -122,92 +144,87 @@ var currentRotation = [0.0, 0.0, 0.0]; // yaw, pitch, roll
          }
       }
       currentRotation[1] = 0.0 - displayLatitude; // pitch amount for rotation call
-//console.log("currentRotation = [" + currentRotation[0] + "," + currentRotation[1]
-//    + "," + currentRotation[2] + "]");
-}
+   }
 
 
-// this is the main event loop for generating the animated globe display
+   // this is the main event loop for generating the animated globe display
 
-function updateDisplay() {
+   function updateDisplay() {
 
-  updateViewRotation();
-  projection.rotate(currentRotation);
-  //projection.rotate([-30, -45]); // this would use static values to set the view
+      updateViewRotation();
+      projection.rotate(currentRotation);
+      //projection.rotate([-30, -45]); // this would use static values to set the view
 
+      context.fillStyle = BACKGROUND_COLOR;
+      context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  //context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  context.fillStyle = BACKGROUND_COLOR;
-  context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // draw globe background -- this is the ocean color
+      context.beginPath();
+      context.fillStyle = WATER_COLOR;
+      context.arc(CANVAS_WIDTH/2,CANVAS_HEIGHT/2,CANVAS_HEIGHT/2, 0, 2 * Math.PI);
+      context.fill();
 
-  // draw globe background -- this is the ocean color
-  context.beginPath();
-  context.fillStyle = WATER_COLOR;
-  context.arc(CANVAS_WIDTH/2,CANVAS_HEIGHT/2,CANVAS_HEIGHT/2, 0, 2 * Math.PI);
-  context.fill();
+      context.lineWidth = 0.5;
 
-  context.lineWidth = 0.5;
+      // draw map grid lines
+      var graticule = d3.geoGraticule();
+      context.beginPath();
+      geoGenerator(graticule());
+      context.strokeStyle = GRID_COLOR;
+      context.stroke();
 
-  // draw map grid lines
-  var graticule = d3.geoGraticule();
-  context.beginPath();
-  geoGenerator(graticule());
-  context.strokeStyle = GRID_COLOR;
-  context.stroke();
+      // draw landmass boundaries
+      context.beginPath();
+      geoGenerator({type: 'FeatureCollection', features: geojson.features});
+      context.fillStyle = LAND_COLOR;
+      context.fill();
+      context.strokeStyle = BOUNDARY_COLOR;
+      context.stroke();
 
+      // draw asset position
+      if (!isNaN(assetLatitude) && !isNaN(assetLongitude)) {
 
-  // draw landmass boundaries
-  context.beginPath();
-  geoGenerator({type: 'FeatureCollection', features: geojson.features});
-  context.fillStyle = LAND_COLOR;
-  context.fill();
-  context.strokeStyle = BOUNDARY_COLOR;
-  context.stroke();
+         // draw position marker
+         context.beginPath();
+         var circle = d3.geoCircle()
+                     .center([assetLongitude, assetLatitude])
+                     .radius(2);
+         geoGenerator(circle());
+         context.fillStyle = MARKER_COLOR;
+         var oldAlpha = context.globalAlpha;
+         context.globalAlpha = 0.6;
+         context.fill();
+         context.globalAlpha = oldAlpha;
 
-  // draw asset position
-  if (!isNaN(assetLatitude) && !isNaN(assetLongitude)) {
+         // draw asset position (numeric)
+         context.font = "18px Helvetica";
+         context.fillStyle = MARKER_TEXT_COLOR;
+         context.fillText("Lat/Lon =", 600, 30);
+         var positionText = roundForDisplay(assetLatitude,2) + ","
+                          + roundForDisplay(assetLongitude,2);
+         context.fillText(positionText, 680, 30);
+      }
 
-    // draw position marker
-    context.beginPath();
-    var circle = d3.geoCircle()
-      .center([assetLongitude, assetLatitude])
-      .radius(2);
-    geoGenerator(circle());
-    context.fillStyle = MARKER_COLOR;
-    var oldAlpha = context.globalAlpha;
-    context.globalAlpha = 0.6;
-    context.fill();
-    context.globalAlpha = oldAlpha;
+      setTimeout(updateDisplay, DISPLAY_INTERVAL);
+   }
 
-    // draw asset position (numeric)
-    context.font = "18px Helvetica";
-    context.fillStyle = MARKER_TEXT_COLOR;
-    context.fillText("Lat/Lon =", 600, 30);
-    var positionText = roundForDisplay(assetLatitude,2) + ","
-                     + roundForDisplay(assetLongitude,2);
-    context.fillText(positionText, 680, 30);
-  }
-
-  setTimeout(updateDisplay, DISPLAY_INTERVAL);
-}
-
-function roundForDisplay(x,p){
-  console.log(x,p);
-  return parseFloat(Math.round(x * Math.pow(10, p)) /Math.pow(10,p)).toFixed(p);
-}
+   function roundForDisplay(x,p){
+      console.log(x,p);
+      return parseFloat(Math.round(x * Math.pow(10, p)) /Math.pow(10,p)).toFixed(p);
+   }
 
 
-// this is used for manual testing, so the user can set coordinates directly
+   // this is used for manual testing, so the user can set coordinates directly
 
-function manualPositionUpdate() {
-  var newLatitude = Math.fround(document.getElementById("latitude_entry").value);
-  var newLongitude = Math.fround(document.getElementById("longitude_entry").value);
-  if (!isNaN(newLatitude) && !isNaN(newLongitude)) {
-    console.log("setting new position: " + newLatitude + "," + newLongitude);
-    assetLatitude = newLatitude;
-    assetLongitude = newLongitude;
-  }
-}
+   function manualPositionUpdate() {
+      var newLatitude = Math.fround(document.getElementById("latitude_entry").value);
+      var newLongitude = Math.fround(document.getElementById("longitude_entry").value);
+      if (!isNaN(newLatitude) && !isNaN(newLongitude)) {
+         console.log("setting new position: " + newLatitude + "," + newLongitude);
+         assetLatitude = newLatitude;
+         assetLongitude = newLongitude;
+      }
+   }
 
 
    function commIndicator(color, offset) {
