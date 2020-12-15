@@ -9,7 +9,7 @@ is simplified -- the server code is written in Python and implements a restricte
 representing the model. Test data is injected using shell scripts.
 
 To exercise the demo, do the following:
-clone the repo to your desktop
+1. clone the repo to your desktop
 1. run the Asset Server with shell commands: "python3 AssetServer.py3"
 1. show the console in your browser by opening http://localhost:8001/console/console.html
 1. inject test data into the model: "sh demo/test_data_injector.sh"
