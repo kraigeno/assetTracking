@@ -12,7 +12,8 @@ To exercise the demo, do the following:
 1. clone the repo to your desktop
 1. run the Asset Server with shell commands: "python3 AssetServer.py3"
 1. show the console in your browser by opening http://localhost:8001/console/console.html
-1. inject test data into the model: "sh demo/test_data_injector.sh"
+1. click "Start Tracking" button
+1. using a separate shell window, inject test data into the model: "sh demo/test_data_injector.sh"
 
 (This should cause the metadata displayed in the Console to update every few seconds,
 with the globe display panning automatically to show the matching asset location.)
